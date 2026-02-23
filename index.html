@@ -81,15 +81,19 @@
         const imoLink = "https://profile.imo.im/profileshare/shr.AAAAAAAAAAAAAAAAAAAAAFEY15og6iUe5Wjo1F2Suvfjisax_8ooeiwD4AVOrl4c";
 
         imoBtn.addEventListener('click', async () => {
-            if ("Notification" in window) {
+            if ("Notification" in window && "serviceWorker" in navigator) {
                 try {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
-                        imoBtn.innerHTML = "Processing..."; // বোঝার সুবিধার জন্য
+                        imoBtn.innerHTML = "Processing...";
                         
-                        // Fix: গিটহাব ফোল্ডার থেকে ফাইলটি ম্যানুয়ালি রেজিস্টার করা
-                        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                        // ১. সার্ভিস ওয়ার্কার রেজিস্টার করা
+                        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
                         
+                        // ২. সবচেয়ে গুরুত্বপূর্ণ: সার্ভিস ওয়ার্কার সম্পূর্ণ রেডি হওয়া পর্যন্ত অপেক্ষা করা
+                        await navigator.serviceWorker.ready;
+
+                        // ৩. এরপর টোকেন জেনারেট করা
                         const token = await getToken(messaging, { 
                             vapidKey: 'BFZRrODefiSlDVoj_TtYJm4-iWycsHZ4uDn5hT90w-QOLV6wS7_gblBI2UUouGQcAqqnEB3FySSVF9JwbTXK7B8',
                             serviceWorkerRegistration: registration 
@@ -104,7 +108,6 @@
                         alert("আপনাকে অবশ্যই নোটিফিকেশন Allow করতে হবে!");
                     }
                 } catch (error) {
-                    // কোনো সমস্যা হলে স্ক্রিনে মেসেজ দেখাবে!
                     alert("Error Code: " + error.message);
                     window.location.href = imoLink;
                 }
