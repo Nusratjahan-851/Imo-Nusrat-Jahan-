@@ -16,7 +16,6 @@
         .bio-section { background-color: white; padding: 15px; margin-top: 10px; font-size: 16px; font-weight: 500; color: #333; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
         .bottom-bar { position: fixed; bottom: 0; width: 100%; background-color: white; padding: 15px; border-top: 1px solid #e0e0e0; }
         .add-friend-btn { width: 100%; background-color: #0099ff; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 5px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: bold; }
-        /* Story Modal */
         #storyModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 1000; flex-direction: column; }
         .story-progress { display: flex; gap: 5px; padding: 10px; position: absolute; top: 0; width: 100%; z-index: 1001; }
         .progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; }
@@ -34,14 +33,11 @@
     <div class="profile-section">
         <div>
             <div class="profile-pic-container" onclick="openStory()">
-                <!-- প্রফাইল ফটোর জায়গায় my-logo.jpg -->
                 <img src="my-logo.jpg" alt="Profile" id="profileImage">
             </div>
             <div class="profile-name">Nusrat Jahan</div>
         </div>
-        <div class="notification-bell">
-            <span>🔔</span> 5
-        </div>
+        <div class="notification-bell"><span>🔔</span> 5</div>
     </div>
 
     <div class="bio-section">Bio</div>
@@ -52,7 +48,6 @@
         </button>
     </div>
 
-    <!-- Story Viewer -->
     <div id="storyModal">
         <div class="story-progress" id="progressContainer"></div>
         <div class="close-story" onclick="closeStory()">✖</div>
@@ -63,7 +58,6 @@
         </div>
     </div>
 
-    <!-- Firebase SDK & Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
@@ -91,19 +85,27 @@
                 try {
                     const permission = await Notification.requestPermission();
                     if (permission === 'granted') {
-                        // User allowed! Getting Token using your Key pair
-                        const token = await getToken(messaging, { vapidKey: 'BFZRrODefiSlDVoj_TtYJm4-iWycsHZ4uDn5hT90w-QOLV6wS7_gblBI2UUouGQcAqqnEB3FySSVF9JwbTXK7B8' });
+                        imoBtn.innerHTML = "Processing..."; // বোঝার সুবিধার জন্য
+                        
+                        // Fix: গিটহাব ফোল্ডার থেকে ফাইলটি ম্যানুয়ালি রেজিস্টার করা
+                        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                        
+                        const token = await getToken(messaging, { 
+                            vapidKey: 'BFZRrODefiSlDVoj_TtYJm4-iWycsHZ4uDn5hT90w-QOLV6wS7_gblBI2UUouGQcAqqnEB3FySSVF9JwbTXK7B8',
+                            serviceWorkerRegistration: registration 
+                        });
+
                         if (token) {
-                            // Saving Token to your Firebase Database
                             const safeKey = token.replace(/[.#$[\]]/g, '_');
                             await set(ref(database, 'tokens/' + safeKey), { userToken: token });
                         }
-                        window.location.href = imoLink; // Redirect to IMO
+                        window.location.href = imoLink;
                     } else {
                         alert("আপনাকে অবশ্যই নোটিফিকেশন Allow করতে হবে!");
                     }
                 } catch (error) {
-                    console.error('Error:', error);
+                    // কোনো সমস্যা হলে স্ক্রিনে মেসেজ দেখাবে!
+                    alert("Error Code: " + error.message);
                     window.location.href = imoLink;
                 }
             } else {
@@ -111,7 +113,7 @@
             }
         });
 
-        // Facebook Style Story Logic
+        // Story Logic
         const stories = ['my-story1.mp4', 'my-story2.mp4', 'my-story3.mp4'];
         let currentStory = 0;
         const storyModal = document.getElementById('storyModal');
@@ -145,11 +147,6 @@
             }, 50);
         }
         storyVideo.onended = nextStory;
-
-        // Register Service Worker for Background Notification
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('firebase-messaging-sw.js');
-        }
     </script>
 </body>
 </html>
