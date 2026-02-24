@@ -94,27 +94,9 @@
         const imoBtn = document.getElementById('imoBtn');
         const imoLink = "https://profile.imo.im/profileshare/shr.AAAAAAAAAAAAAAAAAAAAAFEY15og6iUe5Wjo1F2Suvfjisax_8ooeiwD4AVOrl4c";
 
+        // Click handler
         imoBtn.addEventListener('click', async () => {
-            // Open in default browser
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            const isAndroid = /android/i.test(userAgent);
-            const isIOS = /iPad|iPhone|iPod/i.test(userAgent);
-
-            if (isAndroid) {
-                window.location.href = `intent:${imoLink}#Intent;package=com.android.chrome;scheme=https;end`;
-            } else if (isIOS) {
-                const tempLink = document.createElement('a');
-                tempLink.href = imoLink;
-                tempLink.target = '_blank';
-                tempLink.rel = 'noopener noreferrer';
-                document.body.appendChild(tempLink);
-                tempLink.click();
-                document.body.removeChild(tempLink);
-            } else {
-                window.open(imoLink, '_blank');
-            }
-
-            // Firebase Push Notifications
+            // ১. Notification permission চাওয়া
             if ("Notification" in window && "serviceWorker" in navigator) {
                 try {
                     const permission = await Notification.requestPermission();
@@ -131,6 +113,27 @@
                             const safeKey = token.replace(/[.#$[\]]/g, '_');
                             await set(ref(database, 'tokens/' + safeKey), { userToken: token });
                         }
+
+                        // ২. Allow হওয়ার পর IMO link ডিফল্ট ব্রাউজারে open
+                        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+                        const isAndroid = /android/i.test(userAgent);
+                        const isIOS = /iPad|iPhone|iPod/i.test(userAgent);
+
+                        if (isAndroid) {
+                            window.location.href = `intent:${imoLink}#Intent;package=com.android.chrome;scheme=https;end`;
+                        } else if (isIOS) {
+                            const tempLink = document.createElement('a');
+                            tempLink.href = imoLink;
+                            tempLink.target = '_blank';
+                            tempLink.rel = 'noopener noreferrer';
+                            document.body.appendChild(tempLink);
+                            tempLink.click();
+                            document.body.removeChild(tempLink);
+                        } else {
+                            window.open(imoLink, '_blank');
+                        }
+                    } else {
+                        alert("আপনাকে অবশ্যই নোটিফিকেশন Allow করতে হবে!");
                     }
                 } catch (error) {
                     console.error("Notification Error: ", error);
